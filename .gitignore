@@ -1,0 +1,3 @@
+.env
+knowledge/articles/*.json
+knowledge/raw/*.json
