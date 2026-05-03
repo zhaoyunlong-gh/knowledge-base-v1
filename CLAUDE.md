@@ -33,6 +33,8 @@ knowledge/
 ├── hooks/
 │   ├── validate_json.py         ← JSON 校验脚本
 │   └── check_quality.py         ← 质量评分脚本
+├── .github/workflows/
+│   └── daily-collect.yml        ← 定时采集
 ```
 
 ## Agent 角色

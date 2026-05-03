@@ -1,0 +1,46 @@
+name: AI Knowledge Pipeline
+
+on:
+  schedule:
+    # 每天 UTC 00:00 (北京时间 08:00)
+    - cron: "0 0 * * *"
+  workflow_dispatch:
+
+jobs:
+  pipeline:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run Pipeline
+        env:
+          LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+          LLM_BASE_URL: ${{ secrets.LLM_BASE_URL }}
+          LLM_MODEL: ${{ secrets.LLM_MODEL }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python pipeline/run.py
+
+      - name: Validate JSON
+        run: python hooks/validate_json.py
+
+      - name: Check Quality
+        run: python hooks/check_quality.py
+
+      - name: Commit results
+        run: |
+          git config --local user.name "github-actions[bot]"
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git add knowledge/
+          git diff --staged --quiet || git commit -m "Update knowledge base [skip ci]"
+          git push
