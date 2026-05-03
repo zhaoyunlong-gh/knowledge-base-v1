@@ -74,7 +74,9 @@ class ModelClient:
 Stars: {stars}
 Topics: {topics}
 
-只返回 JSON，不要其他内容。格式：{{"summary":"...","relevance_score":0.0,"score_breakdown":{{"tech_depth":0.0,"practical_value":0.0,"timeliness":0.0,"community_heat":0.0,"domain_match":0.0}},"tags":["tag1","tag2"]}}"""
+只返回 JSON，不要其他内容。格式：{{"summary":"...","relevance_score":0.0到1.0之间,"score_breakdown":{{"tech_depth":0.0到10.0,"practical_value":0.0到10.0,"timeliness":0.0到10.0,"community_heat":0.0到10.0,"domain_match":0.0到10.0}},"tags":["tag1","tag2"]}}
+
+重要：relevance_score 必须是 0.0 到 1.0 之间的小数，score_breakdown 各项是 0.0 到 10.0 之间的分数。"""
 
     def _call_llm(self, prompt: str) -> str:
         """调用 LLM API，实现重试逻辑"""
@@ -146,6 +148,21 @@ Topics: {topics}
                 result = json.loads(candidate)
                 if all(k in result for k in ["summary", "relevance_score", "score_breakdown", "tags"]):
                     from datetime import datetime
+
+                    # 规范化 relevance_score 到 0.0-1.0 范围
+                    score = result.get("relevance_score", 0.0)
+                    if isinstance(score, (int, float)):
+                        if score > 1.0:
+                            score = score / 10.0  # 除以 10 转换
+                        result["relevance_score"] = max(0.0, min(1.0, score))
+
+                    # 规范化 score_breakdown 到 0.0-10.0 范围
+                    breakdown = result.get("score_breakdown", {})
+                    for key in ["tech_depth", "practical_value", "timeliness", "community_heat", "domain_match"]:
+                        val = breakdown.get(key, 0.0)
+                        if isinstance(val, (int, float)) and val > 10.0:
+                            breakdown[key] = min(10.0, val)
+                    result["score_breakdown"] = breakdown
 
                     result["analyzed_at"] = datetime.utcnow().isoformat() + "Z"
                     return result
